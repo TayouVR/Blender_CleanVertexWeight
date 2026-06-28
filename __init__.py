@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: GPL-3.0-only
 #
-# Copyright (C) 2024 Tayou <tayou@gmx.net>
+# Copyright (C) 2025 Tayou <git@tayou.org>
 #
 # This file is part of the Blender Plugin "Vertex Weight Cleanup" by Tayou.
 #
@@ -25,7 +25,7 @@ bl_info = {
     "author": "Tayou",
     "location": "Mesh > Context Menu > cleanup vertex weights",
     "description": "Cleans up the actively selected mesh by removing all 0-weight vertices from all vertex groups.",
-    "version": (1, 0, 0),
+    "version": (1, 3, 0),
     "blender": (3, 4, 1),
     "tracker_url": 'https://github.com/TayouVR/Blender_merge-bones/issues',
     "doc_url": "https://github.com/TayouVR/Blender_merge-bones",
@@ -33,22 +33,18 @@ bl_info = {
     'warning': '',
 }
 
-
-# --------------------------------------------
-# look at TODOs you idiot!
-# --------------------------------------------
-
+# -------------- vertex WEIGHTS -----------
 class CleanVertexWeights(bpy.types.Operator):
-    """Merge Selected Bones into Active"""  # Use this as a tooltip for menu items and buttons.
+    """Cleans up the actively selected mesh by removing all 0-weight vertices from all vertex groups"""  # Use this as a tooltip for menu items and buttons.
     bl_idname = "mesh.cleanup_vert_weights"  # Unique identifier for buttons and menu items to reference.
-    bl_label = "cleanup vertex weights"  # Display name in the interface.
+    bl_label = "Cleanup Vertex Weights"  # Display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # Enable undo for the operator.
 
     def execute(self, context):
         print("Starting vertex weight cleanup!!!")
 
         # Get the active mesh object
-        obj = bpy.context.object
+        obj = context.object
         if obj is None or obj.type != 'MESH':
             print("No mesh object selected.")
         else:
@@ -70,20 +66,63 @@ class CleanVertexWeights(bpy.types.Operator):
         print("vertex weight cleanup Done!!!")
         return {'FINISHED'}  # Lets Blender know the operator finished successfully.
 
+# ------------------ vertex GROUPS -----------------
+class CleanVertexGroups(bpy.types.Operator):
+    """Cleans up the actively selected mesh by removing all 0-weight vertex groups"""  # Use this as a tooltip for menu items and buttons.
+    bl_idname = "mesh.cleanup_vert_groups"  # Unique identifier for buttons and menu items to reference.
+    bl_label = "Cleanup Vertex Groups"  # Display name in the interface.
+    bl_options = {'REGISTER', 'UNDO'}  # Enable undo for the operator.
+
+    def execute(self, context):
+        print("Starting vertex group cleanup!!!")
+
+        # Get the active mesh object
+        obj = context.object
+        if obj is None or obj.type != 'MESH':
+            print("No mesh object selected.")
+        else:
+            # iterate over each vertex group
+            # the list() call here copies the list into a separate list in memory,
+            # to avoid modifying data while iterating
+            for vgroup in list(obj.vertex_groups):
+                has_weight = False
+
+                # iterate over each vertex and check if it has a weight in the current group
+                for vert in obj.data.vertices:
+                    try:
+                        # attempt to get the weight of the vertex in the current group
+                        weight = vgroup.weight(vert.index)
+                        if weight > 0:
+                            has_weight = True
+                            break  # no need to check further if there's already a weight
+                    except RuntimeError:
+                        # if the vertex is not in the vertex group, it will raise a runtime error
+                        continue
+
+                # if no vertex had any weight, remove the vertex group
+                if not has_weight:
+                    obj.vertex_groups.remove(vgroup)
+
+        print("vertex weight cleanup Done!!!")
+        return {'FINISHED'}  # Lets Blender know the operator finished successfully.
+
+
 
 def draw_menu(self, context):
     layout = self.layout
     layout.separator()
     layout.operator(CleanVertexWeights.bl_idname)
-
+    layout.operator(CleanVertexGroups.bl_idname)
 
 def register():
     bpy.utils.register_class(CleanVertexWeights)
+    bpy.utils.register_class(CleanVertexGroups)
     bpy.types.VIEW3D_MT_object_context_menu.append(draw_menu)
 
 
 def unregister():
     bpy.utils.unregister_class(CleanVertexWeights)
+    bpy.utils.unregister_class(CleanVertexGroups)
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_menu)
 
 
