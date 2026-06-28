@@ -8,4 +8,9 @@ Blender plugin to clean up the actively selected mesh by removing all 0-weight v
 
 ## Usage
 - select the mesh you wish to edit
-- (in object mode) rick click, at the bottom "cleanup vertex weights"
+- (in object mode) rick click, at the bottom "Cleanup Vertex Weights"
+
+# Building Extension (blender 4.2.0+)
+```shell
+blender --command extension build
+```
